@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE } from '../api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDroplet, faUser, faEnvelope, faLock, faEye, faEyeSlash,
@@ -6,7 +7,7 @@ import {
   faCircleCheck, faCircleXmark, faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 
-const API = '/api/accounts';
+const API = `${API_BASE}/api/accounts`;
 
 /* Simple email format check on the client side */
 const isValidEmailFormat = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);

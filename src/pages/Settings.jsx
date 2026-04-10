@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { API_BASE } from '../api';
 import {
   faPlug, faGear, faBell, faKey, faEnvelope, faPowerOff,
   faMobileScreen, faDesktop, faCheck, faLocationDot,
   faWifi, faMicrochip, faServer, faCircle, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 
-const API = '/api/settings';
+const API = `${API_BASE}/api/settings`;
 
 const tabs = [
   { key: 'api',           label: 'API Settings',         icon: faPlug,     color: '#6366f1' },

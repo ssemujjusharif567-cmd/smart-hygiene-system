@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_BASE } from '../api';
 import './Analytics.css';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -18,7 +19,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 const toISO = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 const todayISO = () => { const t = new Date(); return toISO(t.getFullYear(), t.getMonth(), t.getDate()); };
 
-const API = '/api/analytics';
+const API = `${API_BASE}/api/analytics`;
 const EMPTY = { labels: [], soapUsage: [], waterUsage: [], handwashes: [], unwashed: [] };
 
 /* ─── MiniCalendar ─── */

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { API_BASE } from '../api';
 import {
   faArrowLeft, faLocationDot, faBatteryThreeQuarters, faBatteryFull,
   faBatteryHalf, faBatteryQuarter, faDroplet, faPumpSoap,
@@ -21,7 +22,7 @@ const SENSOR_META = [
   { key: 'temperature', label: 'Temperature',  icon: faTemperatureHalf, color: '#f59e0b' },
 ];
 
-const API = '/api/devices';
+const API = `${API_BASE}/api/devices`;
 
 const batteryMeta = (b) => {
   if (b === null || b === undefined) return null;

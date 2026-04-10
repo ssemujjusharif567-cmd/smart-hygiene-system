@@ -9,6 +9,7 @@ import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import Auth from './pages/Auth';
+import { API_BASE } from './api';
 import './App.css';
 
 function getCSRFToken() {
@@ -36,7 +37,7 @@ function App() {
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (stored) {
-      fetch('/api/accounts/me/', { credentials: 'include' })
+      fetch(`${API_BASE}/api/accounts/me/`, { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (data) setUser(data);
@@ -51,7 +52,7 @@ function App() {
   /* ── Alert count ── */
   useEffect(() => {
     if (!user) return;
-    fetch('/api/dashboard/alerts/')
+    fetch(`${API_BASE}/api/dashboard/alerts/`)
       .then(r => r.ok ? r.json() : [])
       .then(data => setAlertCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {});
@@ -60,7 +61,7 @@ function App() {
   /* ── Theme ── */
   useEffect(() => {
     if (!user) return;
-    fetch('/api/theme/', { credentials: 'include' })
+    fetch(`${API_BASE}/api/theme/`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.theme) setTheme(data.theme); })
       .catch(() => {});
@@ -70,7 +71,7 @@ function App() {
     document.body.classList.remove('theme-default', 'theme-black');
     document.body.classList.add(`theme-${theme}`);
     if (!user) return;
-    fetch('/api/theme/', {
+    fetch(`${API_BASE}/api/theme/`, {
       method: 'PATCH',
       headers: { 
         'Content-Type': 'application/json',
@@ -84,7 +85,7 @@ function App() {
   const handleAuth = (userData) => setUser(userData);
 
   const handleLogout = async () => {
-    await fetch('/api/accounts/logout/', { 
+    await fetch(`${API_BASE}/api/accounts/logout/`, { 
       method: 'POST',
       headers: { 'X-CSRFToken': getCSRFToken() },
       credentials: 'include',

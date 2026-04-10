@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDroplet, faPumpSoap, faTemperatureHalf, faHandsWash,
@@ -94,12 +95,12 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const [summaryRes, kpiRes, sensorRes, deviceRes, alertRes, activityRes] = await Promise.all([
-          fetch('/api/dashboard/summary/'),
-          fetch('/api/dashboard/kpi/'),
-          fetch('/api/dashboard/sensors/'),
-          fetch('/api/dashboard/devices/'),
-          fetch('/api/dashboard/alerts/'),
-          fetch('/api/dashboard/activity/'),
+          fetch(`${API_BASE}/api/dashboard/summary/`),
+          fetch(`${API_BASE}/api/dashboard/kpi/`),
+          fetch(`${API_BASE}/api/dashboard/sensors/`),
+          fetch(`${API_BASE}/api/dashboard/devices/`),
+          fetch(`${API_BASE}/api/dashboard/alerts/`),
+          fetch(`${API_BASE}/api/dashboard/activity/`),
         ]);
 
         if (summaryRes.ok) setSummary(await summaryRes.json());

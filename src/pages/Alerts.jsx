@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTriangleExclamation, faCircleExclamation, faCircleInfo,
@@ -57,7 +58,7 @@ const Alerts = () => {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
-        const res = await fetch('/api/alerts/?format=json');
+        const res = await fetch(`${API_BASE}/api/alerts/?format=json`);
         if (res.ok) {
           const data = await res.json();
           const alertArray = Array.isArray(data) ? data : data.results || [];

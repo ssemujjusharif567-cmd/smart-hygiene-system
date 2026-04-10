@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { API_BASE } from '../api';
 import {
   faServer, faLocationDot, faClock, faBatteryFull,
   faBatteryThreeQuarters, faBatteryHalf, faBatteryQuarter,
@@ -16,7 +17,7 @@ const ICON_MAP = {
   faEye, faWater, faToggleOn, faDisplay, faMusic,
 };
 
-const API = '/api/devices';
+const API = `${API_BASE}/api/devices`;
 
 const batteryMeta = (b) => {
   if (b === null || b === undefined) return null;

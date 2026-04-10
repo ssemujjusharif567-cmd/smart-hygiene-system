@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faEnvelope, faUserTag, faLock, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 
@@ -21,8 +22,8 @@ const Account = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const url = isLogin
-      ? 'http://localhost:8000/api/accounts/login/'
-      : 'http://localhost:8000/api/accounts/register/';
+      ? `${API_BASE}/api/accounts/login/`
+      : `${API_BASE}/api/accounts/register/`;
     const body = isLogin
       ? { username: formData.username, password: formData.password }
       : {
