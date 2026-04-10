@@ -105,10 +105,14 @@ function App() {
 
   /* Not logged in → show Auth page */
   if (!user) {
+    document.body.classList.add('auth-body');
+    document.body.classList.remove('app-body');
     return <Auth onAuth={handleAuth} />;
   }
 
   /* Logged in → full app */
+  document.body.classList.add('app-body');
+  document.body.classList.remove('auth-body');
   return (
     <BrowserRouter>
       <Navbar theme={theme} setTheme={setTheme} alertCount={alertCount} user={user} onLogout={handleLogout} />

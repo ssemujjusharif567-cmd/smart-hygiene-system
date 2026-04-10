@@ -88,15 +88,21 @@ body.theme-black {
 
 body {
   margin: 0;
-  overflow: hidden;
   height: 100svh;
+}
+
+body.app-body {
+  overflow: hidden;
+}
+
+body.auth-body {
+  overflow-y: auto;
 }
 
 #root {
   width: 100%;
   height: 100svh;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 h1,

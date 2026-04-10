@@ -2784,7 +2784,6 @@
   min-height: 100svh;
   width: 100vw;
   background: var(--bg);
-  overflow: hidden;
 }
 
 /* ── Left panel ── */
@@ -2896,11 +2895,12 @@
   width: 480px;
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 40px 32px;
   background: var(--bg);
   overflow-y: auto;
+  min-height: 100svh;
 }
 .auth-card {
   width: 100%;
