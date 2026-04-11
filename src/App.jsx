@@ -103,33 +103,39 @@ function App() {
     );
   }
 
-  /* Not logged in → show Auth page */
-  if (!user) {
-    document.body.classList.add('auth-body');
-    document.body.classList.remove('app-body');
-    return <Auth onAuth={handleAuth} />;
-  }
+  const isAuth = !user;
+  document.body.classList.toggle('auth-body', isAuth);
+  document.body.classList.toggle('app-body', !isAuth);
 
-  /* Logged in → full app */
-  document.body.classList.add('app-body');
-  document.body.classList.remove('auth-body');
   return (
     <BrowserRouter>
-      <Navbar theme={theme} setTheme={setTheme} alertCount={alertCount} user={user} onLogout={handleLogout} />
-      <div className="app-shell">
-        <Sidebar theme={theme} setTheme={setTheme} alertCount={alertCount} user={user} onLogout={handleLogout} />
-        <main className="app-main">
-          <Routes>
-            <Route path="/"           element={<Dashboard />} />
-            <Route path="/devices"    element={<Devices />} />
-            <Route path="/device/:id" element={<DeviceDetails />} />
-            <Route path="/alerts"     element={<Alerts />} />
-            <Route path="/analytics"  element={<Analytics />} />
-            <Route path="/settings"   element={<Settings />} />
-            <Route path="*"           element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        {/* Auth route — always accessible */}
+        <Route path="/login" element={
+          user ? <Navigate to="/" replace /> : <Auth onAuth={handleAuth} />
+        } />
+
+        {/* App routes — accessible to everyone */}
+        <Route path="/*" element={
+          <>
+            <Navbar theme={theme} setTheme={setTheme} alertCount={alertCount} user={user} onLogout={handleLogout} />
+            <div className="app-shell">
+              <Sidebar theme={theme} setTheme={setTheme} alertCount={alertCount} user={user} onLogout={handleLogout} />
+              <main className="app-main">
+                <Routes>
+                  <Route path="/"           element={<Dashboard />} />
+                  <Route path="/devices"    element={<Devices />} />
+                  <Route path="/device/:id" element={<DeviceDetails />} />
+                  <Route path="/alerts"     element={<Alerts />} />
+                  <Route path="/analytics"  element={<Analytics />} />
+                  <Route path="/settings"   element={<Settings />} />
+                  <Route path="*"           element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+            </div>
+          </>
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }

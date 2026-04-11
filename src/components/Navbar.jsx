@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHouse, faServer, faBell, faChartLine, faGear,
-  faDroplet, faBars, faXmark, faUserShield, faSun, faMoon, faRightFromBracket,
+  faDroplet, faBars, faXmark, faUserShield, faSun, faMoon, faRightFromBracket, faRightToBracket,
 } from '@fortawesome/free-solid-svg-icons';
 import './Navbar.css';
 
@@ -18,6 +18,7 @@ const nav = [
 const Navbar = ({ theme, setTheme, alertCount, user, onLogout }) => {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -134,12 +135,13 @@ const Navbar = ({ theme, setTheme, alertCount, user, onLogout }) => {
             <FontAwesomeIcon icon={faUserShield} />
           </div>
           <div className="nb-drawer-user-info">
-            <span className="nb-drawer-user-name">{user?.full_name || user?.username || 'Admin'}</span>
-            <span className="nb-drawer-user-role">System Manager</span>
+            <span className="nb-drawer-user-name">{user ? (user.full_name || user.username) : 'Guest'}</span>
+            <span className="nb-drawer-user-role">{user ? 'System Manager' : 'Browsing as guest'}</span>
           </div>
-          <button className="nb-drawer-logout" onClick={onLogout} title="Sign out">
-            <FontAwesomeIcon icon={faRightFromBracket} />
-          </button>
+          {user
+            ? <button className="nb-drawer-logout" onClick={onLogout} title="Sign out"><FontAwesomeIcon icon={faRightFromBracket} /></button>
+            : <button className="nb-drawer-logout" onClick={() => { close(); navigate('/login'); }} title="Sign in"><FontAwesomeIcon icon={faRightToBracket} /></button>
+          }
         </div>
 
       </div>

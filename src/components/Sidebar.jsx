@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHouse, faServer, faBell, faChartLine, faGear,
-  faDroplet, faChevronLeft, faChevronRight, faUserShield, faMoon, faSun, faRightFromBracket,
+  faDroplet, faChevronLeft, faChevronRight, faUserShield, faMoon, faSun, faRightFromBracket, faRightToBracket,
 } from '@fortawesome/free-solid-svg-icons';
 
 const nav = [
@@ -16,6 +16,7 @@ const nav = [
 
 const Sidebar = ({ theme, setTheme, alertCount, user, onLogout }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   // Keep app-shell data attribute in sync so CSS sibling selector works
   useEffect(() => {
@@ -92,12 +93,13 @@ const Sidebar = ({ theme, setTheme, alertCount, user, onLogout }) => {
             <FontAwesomeIcon icon={faUserShield} />
           </div>
           <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{user?.full_name || user?.username || 'Admin'}</span>
-            <span className="sidebar-user-role">System Manager</span>
+            <span className="sidebar-user-name">{user ? (user.full_name || user.username) : 'Guest'}</span>
+            <span className="sidebar-user-role">{user ? 'System Manager' : 'Browsing as guest'}</span>
           </div>
-          <button className="sidebar-logout-btn" onClick={onLogout} title="Sign out">
-            <FontAwesomeIcon icon={faRightFromBracket} />
-          </button>
+          {user
+            ? <button className="sidebar-logout-btn" onClick={onLogout} title="Sign out"><FontAwesomeIcon icon={faRightFromBracket} /></button>
+            : <button className="sidebar-logout-btn" onClick={() => navigate('/login')} title="Sign in"><FontAwesomeIcon icon={faRightToBracket} /></button>
+          }
         </div>
       )}
 
