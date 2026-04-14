@@ -142,13 +142,13 @@ const Auth = ({ onAuth }) => {
         <div className="auth-brand">
           <div className="auth-brand-icon"><FontAwesomeIcon icon={faDroplet} /></div>
           <div>
-            <span className="auth-brand-name">SmartWash</span>
-            <span className="auth-brand-sub">IoT Dashboard</span>
+            <span className="auth-brand-name">Smart Hygiene System</span>
+            <span className="auth-brand-sub">Smart Hygiene System Dashboard</span>
           </div>
         </div>
         <div className="auth-left-body">
           <h1 className="auth-left-title">Monitor your hygiene system in real time</h1>
-          <p className="auth-left-desc">Track devices, sensors, alerts and analytics from a single intelligent dashboard.</p>
+          <p className="auth-left-desc">Tracks devices, sensors, alerts and analytics from a Smart Hygiene System</p>
           <div className="auth-features">
             {['Live sensor readings', 'Remote device control', 'Smart alert system', 'Analytics & reports'].map(f => (
               <div key={f} className="auth-feature-item">
