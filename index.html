@@ -2,10 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        var p = new URLSearchParams(window.location.search).get('p');
+        if (p) {
+          window.history.replaceState(null, null, '/' + decodeURIComponent(p));
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/smart-hygiene-system/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>smart-dashboard</title>
-    <script type="module" crossorigin src="/smart-hygiene-system/assets/index-BC1zl40p.js"></script>
+    <script type="module" crossorigin src="/smart-hygiene-system/assets/index-lZHYMiXS.js"></script>
     <link rel="stylesheet" crossorigin href="/smart-hygiene-system/assets/index-DMIQzJCd.css">
   </head>
   <body>
