@@ -1,7 +1,7 @@
 // ─── Cache version ────────────────────────────────────────────────────────────
 // This timestamp is replaced at build/deploy time by the deploy script.
 // Every new deploy gets a unique version → old caches are wiped automatically.
-const CACHE_VERSION = '1776254887522';
+const CACHE_VERSION = '1776255525324';
 const CACHE_NAME    = `smartwash-v${CACHE_VERSION}`;
 
 // Static shell assets to pre-cache on install
