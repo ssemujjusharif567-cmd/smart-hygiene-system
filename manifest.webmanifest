@@ -16,6 +16,24 @@
       "purpose": "any maskable"
     },
     {
+      "src": "./icon-rounded.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-rounded.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
       "src": "./icon1.png",
       "sizes": "180x180",
       "type": "image/png",
