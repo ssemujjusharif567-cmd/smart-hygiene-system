@@ -248,7 +248,8 @@
   padding: 16px 12px 8px;
   gap: 3px;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .nb-drawer-section {
   font-size: 0.63em;

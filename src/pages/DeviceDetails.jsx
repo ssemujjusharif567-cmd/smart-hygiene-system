@@ -71,14 +71,40 @@ const DeviceDetails = () => {
   const [device,  setDevice]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(false);
+  const [toggling, setToggling] = useState(false);
 
-  useEffect(() => {
+  const refreshDevice = () => {
+    setLoading(true);
+    setError(false);
     fetch(`${API}/${id}/`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(data => setDevice(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refreshDevice();
   }, [id]);
+
+  const handleStatusToggle = async () => {
+    if (!device || toggling) return;
+    const nextStatus = device.status === 'Online' ? 'Offline' : 'Online';
+    setToggling(true);
+    try {
+      const res = await fetch(`${API}/${id}/status/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setDevice(updated);
+      }
+    } finally {
+      setToggling(false);
+    }
+  };
 
   if (loading) return (
     <div className="dd-page">
@@ -142,6 +168,9 @@ const DeviceDetails = () => {
               <FontAwesomeIcon icon={bat.icon} /> {device.battery}%
             </span>
           )}
+          <button type="button" className={`dd-power-toggle ${device.status === 'Online' ? 'dd-toggle-off' : 'dd-toggle-on'}`} onClick={handleStatusToggle} disabled={toggling}>
+            {toggling ? 'Updating…' : device.status === 'Online' ? 'Set Offline' : 'Set Online'}
+          </button>
         </div>
       </div>
 

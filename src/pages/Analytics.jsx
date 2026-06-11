@@ -28,16 +28,56 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 
 const MiniCalendar = ({ label, selected, onSelect, minDate, maxDate }) => {
   const today = new Date();
-  const init  = selected ? new Date(selected + 'T00:00:00') : today;
-  const [vy, setVy] = useState(init.getFullYear());
-  const [vm, setVm] = useState(init.getMonth());
+  const selectedDate = selected
+    ? new Date(selected + 'T00:00:00')
+    : minDate
+      ? new Date(minDate + 'T00:00:00')
+      : today;
+  const [vy, setVy] = useState(selectedDate.getFullYear());
+  const [vm, setVm] = useState(selectedDate.getMonth());
 
-  const prevMonth = () => vm === 0  ? (setVm(11), setVy(y => y - 1)) : setVm(m => m - 1);
-  const nextMonth = () => vm === 11 ? (setVm(0),  setVy(y => y + 1)) : setVm(m => m + 1);
+  useEffect(() => {
+    const next = selected
+      ? new Date(selected + 'T00:00:00')
+      : minDate
+        ? new Date(minDate + 'T00:00:00')
+        : today;
+    setVy(next.getFullYear());
+    setVm(next.getMonth());
+  }, [selected, minDate]);
 
-  // Block navigating to future months
-  const todayYear = today.getFullYear(), todayMonth = today.getMonth();
-  const canGoNext = vy < todayYear || (vy === todayYear && vm < todayMonth);
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const minYear = minDate ? new Date(minDate + 'T00:00:00').getFullYear() : null;
+  const minMonth = minDate ? new Date(minDate + 'T00:00:00').getMonth() : null;
+  const maxYear = maxDate ? new Date(maxDate + 'T00:00:00').getFullYear() : null;
+  const maxMonth = maxDate ? new Date(maxDate + 'T00:00:00').getMonth() : null;
+
+  const canGoPrev = minDate
+    ? (vy > minYear || (vy === minYear && vm > minMonth))
+    : true;
+  const canGoNext = maxDate
+    ? (vy < maxYear || (vy === maxYear && vm < maxMonth))
+    : (vy < todayYear || (vy === todayYear && vm < todayMonth));
+
+  const prevMonth = () => {
+    if (!canGoPrev) return;
+    if (vm === 0) {
+      setVm(11);
+      setVy(y => y - 1);
+    } else {
+      setVm(m => m - 1);
+    }
+  };
+  const nextMonth = () => {
+    if (!canGoNext) return;
+    if (vm === 11) {
+      setVm(0);
+      setVy(y => y + 1);
+    } else {
+      setVm(m => m + 1);
+    }
+  };
 
   const firstDay    = new Date(vy, vm, 1).getDay();
   const daysInMonth = new Date(vy, vm + 1, 0).getDate();
@@ -61,7 +101,9 @@ const MiniCalendar = ({ label, selected, onSelect, minDate, maxDate }) => {
     <div className="mc-wrap">
       <div className="mc-label">{label}</div>
       <div className="mc-header">
-        <button className="mc-nav" onClick={prevMonth}><FontAwesomeIcon icon={faChevronLeft} /></button>
+        <button className="mc-nav" onClick={prevMonth} disabled={!canGoPrev} style={{ opacity: canGoPrev ? 1 : 0.3 }}>
+          <FontAwesomeIcon icon={faChevronLeft} />
+        </button>
         <span className="mc-month-label">{MONTHS_SHORT[vm]} {vy}</span>
         <button className="mc-nav" onClick={nextMonth} disabled={!canGoNext} style={{ opacity: canGoNext ? 1 : 0.3 }}>
           <FontAwesomeIcon icon={faChevronRight} />
@@ -99,7 +141,7 @@ const DateRangeModal = ({ fromDate, toDate, onApply, onClose }) => {
             <div className="drm-header-icon"><FontAwesomeIcon icon={faCalendarDays} /></div>
             <div>
               <span className="drm-title">Select Date Range</span>
-              <span className="drm-sub">Only past and today dates are selectable</span>
+              <span className="drm-sub">Pick a from and to date</span>
             </div>
           </div>
           <button className="drm-close" onClick={onClose}><FontAwesomeIcon icon={faXmark} /></button>
@@ -118,9 +160,26 @@ const DateRangeModal = ({ fromDate, toDate, onApply, onClose }) => {
         </div>
 
         <div className="drm-calendars">
-          <MiniCalendar label="From" selected={from} onSelect={v => { setFrom(v); if (to && v > to) setTo(''); }} maxDate={to || todayISO()} />
+          <div className="drm-cal-pane drm-cal-pane-from">
+            <MiniCalendar
+              key={`from-${from}`}
+              label="From"
+              selected={from}
+              onSelect={v => { setFrom(v); if (to && v > to) setTo(v); }}
+              maxDate={to || todayISO()}
+            />
+          </div>
           <div className="drm-cal-divider" />
-          <MiniCalendar label="To"   selected={to}   onSelect={setTo}  minDate={from || undefined} maxDate={todayISO()} />
+          <div className="drm-cal-pane drm-cal-pane-to">
+            <MiniCalendar
+              key={`to-${to}`}
+              label="To"
+              selected={to}
+              onSelect={setTo}
+              minDate={from || undefined}
+              maxDate={todayISO()}
+            />
+          </div>
         </div>
 
         <div className="drm-actions">
@@ -166,43 +225,77 @@ const ChartCard = ({ title, subtitle, icon, color, children, span }) => (
 
 /* ─── Main component ─── */
 const Analytics = () => {
-  const [range,       setRange]       = useState('month');
+  const [range,       setRange]       = useState('recent');
+  const [resolution,  setResolution]  = useState('auto');
   const [modalOpen,   setModalOpen]   = useState(false);
   const [fromDate,    setFromDate]    = useState('');
   const [toDate,      setToDate]      = useState('');
   const [customLabel, setCustomLabel] = useState('');
+  const [rangeLabel,  setRangeLabel]  = useState('Last 3 minutes');
   const [d,           setD]           = useState(EMPTY);
   const [loading,     setLoading]     = useState(false);
 
-  const fetchData = useCallback(async (r, from, to) => {
+  const fetchData = useCallback(async (r, from, to, res = resolution) => {
     setLoading(true);
     try {
       let url;
-      if (r === 'week')        url = `${API}/week/`;
-      else if (r === 'month')  url = `${API}/month/`;
-      else                     url = `${API}/range/?from=${from}&to=${to}`;
-      const res = await fetch(url);
-      const json = await res.json();
+      const today = new Date();
+      const todayIso = todayISO();
+
+      if (r === 'recent') {
+        url = `${API}/auto/?resolution=${res}`;
+      } else if (r === 'week') {
+        const start = new Date(today);
+        start.setDate(start.getDate() - 6);
+        url = `${API}/range/?from=${toISO(start.getFullYear(), start.getMonth(), start.getDate())}&to=${todayIso}&resolution=${res}`;
+      } else if (r === 'month') {
+        const start = new Date(today.getFullYear(), 0, 1);
+        url = `${API}/range/?from=${toISO(start.getFullYear(), start.getMonth(), start.getDate())}&to=${todayIso}&resolution=${res}`;
+      } else {
+        url = `${API}/range/?from=${from}&to=${to}&resolution=${res}`;
+      }
+
+      const resJson = await fetch(url);
+      const json = await resJson.json();
       setD(json);
+      if (json.range) {
+        setRangeLabel(json.range);
+      } else if (r === 'recent') {
+        setRangeLabel('Last 3 minutes');
+      } else if (r === 'week') {
+        setRangeLabel('Last 7 days');
+      } else if (r === 'month') {
+        setRangeLabel('Year to date');
+      } else if (r === 'custom') {
+        setRangeLabel(customLabel || 'Custom range');
+      }
     } catch {
       setD(EMPTY);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resolution, customLabel]);
 
-  useEffect(() => { fetchData('month', '', ''); }, [fetchData]);
+  useEffect(() => { fetchData(range, fromDate, toDate, resolution); }, [fetchData, range, fromDate, toDate, resolution]);
 
   const applyCustomRange = (from, to) => {
     const fmt = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    setFromDate(from); setToDate(to);
+    setFromDate(from);
+    setToDate(to);
     setCustomLabel(`${fmt(from)} – ${fmt(to)}`);
     setRange('custom');
     setModalOpen(false);
-    fetchData('custom', from, to);
+    fetchData('custom', from, to, resolution);
   };
 
-  const clearCustomRange = () => { setCustomLabel(''); setFromDate(''); setToDate(''); setRange('month'); fetchData('month', '', ''); };
+  const clearCustomRange = () => {
+    setCustomLabel('');
+    setFromDate('');
+    setToDate('');
+    setRange('recent');
+    setRangeLabel('Last 3 minutes');
+    fetchData('recent', '', '', resolution);
+  };
 
   // Derived KPI totals from active data
   const totalSoap    = d.soapUsage.reduce((a, b) => a + b, 0).toFixed(1);
@@ -216,8 +309,8 @@ const Analytics = () => {
   );
 
   const KPI = [
-    { label: 'Soap Used (L)',   value: totalSoap,    change: '+8%',  up: true,  icon: faPumpSoap,      color: '#6366f1' },
-    { label: 'Water Used (L)',  value: totalWater,   change: '+5%',  up: true,  icon: faDroplet,       color: '#0ea5e9' },
+    { label: 'Soap Used (mL)',   value: totalSoap,    change: '+8%',  up: true,  icon: faPumpSoap,      color: '#6366f1' },
+    { label: 'Water Used (mL)',  value: totalWater,   change: '+5%',  up: true,  icon: faDroplet,       color: '#0ea5e9' },
     { label: 'Handwashes',      value: totalWashed,  change: '+12%', up: true,  icon: faHandsWash,     color: '#10b981' },
     { label: 'Left Unwashed',   value: totalUnwashed,change: '-18%', up: false, icon: faPersonWalking, color: '#ef4444' },
   ];
@@ -239,7 +332,7 @@ const Analytics = () => {
     labels: d.labels,
     datasets: [
       {
-        label: 'Soap (L)',
+        label: 'Soap (mL)',
         data: d.soapUsage,
         borderColor: '#6366f1',
         backgroundColor: 'rgba(99,102,241,0.12)',
@@ -251,8 +344,8 @@ const Analytics = () => {
         tension: 0.4,
       },
       {
-        label: 'Water (÷10 L)',
-        data: d.waterUsage.map(v => +(v / 10).toFixed(1)),
+        label: 'Water (÷100 mL)',
+        data: d.waterUsage.map(v => +(v / 100).toFixed(1)),
         borderColor: '#0ea5e9',
         backgroundColor: 'rgba(14,165,233,0.08)',
         fill: true,
@@ -358,14 +451,36 @@ const Analytics = () => {
         </div>
 
         <div className="an-range-toggle">
-          <button className={`an-cal-btn ${range === 'custom' ? 'an-cal-btn-active' : ''}`} onClick={() => setModalOpen(true)} title="Custom date range">
-            <FontAwesomeIcon icon={faCalendarDays} />
-          </button>
-          {['week', 'month'].map(r => (
-            <button key={r} className={`an-range-btn ${range === r ? 'an-range-active' : ''}`} onClick={() => { setRange(r); setCustomLabel(''); fetchData(r, '', ''); }}>
-              {r === 'week' ? 'This Week' : 'This Year'}
+          <div className="an-range-group">
+            <button className={`an-range-btn ${range === 'recent' ? 'an-range-active' : ''}`} onClick={() => { setRange('recent'); setCustomLabel(''); fetchData('recent', '', '', resolution); }}>
+              Recent
             </button>
-          ))}
+            <button className={`an-range-btn ${range === 'week' ? 'an-range-active' : ''}`} onClick={() => { setRange('week'); setCustomLabel(''); fetchData('week', '', '', resolution); }}>
+              7 Days
+            </button>
+            <button className={`an-range-btn ${range === 'month' ? 'an-range-active' : ''}`} onClick={() => { setRange('month'); setCustomLabel(''); fetchData('month', '', '', resolution); }}>
+              Year to Date
+            </button>
+            <button className={`an-cal-btn ${range === 'custom' ? 'an-cal-btn-active' : ''}`} onClick={() => setModalOpen(true)} title="Custom date range">
+              <FontAwesomeIcon icon={faCalendarDays} />
+            </button>
+          </div>
+
+          <div className="an-range-meta">
+            <span className="an-range-label">{rangeLabel}</span>
+            <div className="an-resolution-group">
+              {['auto', 'hourly', 'daily'].map(res => (
+                <button
+                  key={res}
+                  className={`an-res-btn ${resolution === res ? 'an-res-active' : ''}`}
+                  onClick={() => setResolution(res)}
+                >
+                  {res === 'auto' ? 'Auto' : res.charAt(0).toUpperCase() + res.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {customLabel && (
             <span className="an-custom-pill">
               {customLabel}
@@ -379,28 +494,28 @@ const Analytics = () => {
       <div className="an-kpi-row">
         {KPI.map(({ label, value, change, up, icon, color }) => (
           <div key={label} className="an-kpi">
-            <div className="an-kpi-icon" style={{ background: `${color}18`, color }}><FontAwesomeIcon icon={icon} /></div>
+            <div className="an-kpi-top">
+              <div className="an-kpi-icon" style={{ background: `${color}18`, color }}><FontAwesomeIcon icon={icon} /></div>
+              <span className={`an-kpi-change ${up ? 'change-up' : 'change-down'}`}>
+                <FontAwesomeIcon icon={up ? faArrowTrendUp : faArrowTrendDown} />{change}
+              </span>
+            </div>
             <div className="an-kpi-body">
               <span className="an-kpi-value">{value}</span>
               <span className="an-kpi-label">{label}</span>
             </div>
-            <span className={`an-kpi-change ${up ? 'change-up' : 'change-down'}`}>
-              <FontAwesomeIcon icon={up ? faArrowTrendUp : faArrowTrendDown} />{change}
-            </span>
           </div>
         ))}
-        <div className="an-kpi-spacer" />
-        <div className="an-kpi-spacer" />
       </div>
 
       {/* Charts */}
       <div className="an-grid">
 
-        <ChartCard title="Soap Usage" subtitle="Litres consumed over time" icon={faPumpSoap} color="#6366f1">
+        <ChartCard title="Soap Usage" subtitle="Millilitres consumed over time" icon={faPumpSoap} color="#6366f1">
           <Line options={lineOpts} data={makeLineData(d.labels, d.soapUsage, '#6366f1')} />
         </ChartCard>
 
-        <ChartCard title="Water Usage" subtitle="Litres consumed over time" icon={faDroplet} color="#0ea5e9">
+        <ChartCard title="Water Usage" subtitle="Millilitres consumed over time" icon={faDroplet} color="#0ea5e9">
           <Line options={lineOpts} data={makeLineData(d.labels, d.waterUsage, '#0ea5e9')} />
         </ChartCard>
 
@@ -450,9 +565,9 @@ const Analytics = () => {
           <div className="an-insights">
             {[
               { color: '#10b981', text: `Handwash compliance is at ${complianceRate}% — ${complianceRate >= 75 ? 'above' : 'below'} the 75% target.` },
-              { color: '#6366f1', text: `Total soap used: ${totalSoap} L. ${parseFloat(totalSoap) > 30 ? 'Consider scheduling a refill soon.' : 'Levels are adequate.'}` },
+              { color: '#6366f1', text: `Total soap used: ${totalSoap} mL. ${parseFloat(totalSoap) > 30000 ? 'Consider scheduling a refill soon.' : 'Levels are adequate.'}` },
               { color: '#ef4444', text: `${totalUnwashed} people left without washing. ${parseInt(totalUnwashed.replace(',','')) > 100 ? 'Consider audio reminders.' : 'Within acceptable range.'}` },
-              { color: '#0ea5e9', text: `Total water used: ${totalWater} L across the selected period.` },
+              { color: '#0ea5e9', text: `Total water used: ${totalWater} mL across the selected period.` },
             ].map((ins, i) => (
               <div key={i} className="an-insight-item">
                 <span className="an-insight-dot" style={{ background: ins.color }} />

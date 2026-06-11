@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '../api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -8,7 +8,8 @@ import {
   faTriangleExclamation, faCircleExclamation, faArrowTrendUp,
   faArrowTrendDown, faArrowRight, faPersonWalking,
   faBatteryThreeQuarters, faLocationDot, faSun, faCloudSun,
-  faCity, faMoon,
+  faCity, faMoon, faVolumeHigh, faLightbulb, faBolt, faEye,
+  faWater, faToggleOn, faDisplay, faMusic,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -18,127 +19,120 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
+const ICON_MAP = {
+  faPumpSoap, faDroplet, faTemperatureHalf, faHandsWash,
+  faVolumeHigh, faLightbulb, faBolt, faServer,
+  faEye, faWater, faToggleOn, faDisplay, faMusic,
+};
+
 const SEV = {
   High:   { color: '#ef4444', bg: '#fef2f2', icon: faTriangleExclamation },
   Medium: { color: '#f59e0b', bg: '#fffbeb', icon: faCircleExclamation   },
   Low:    { color: '#3b82f6', bg: '#eff6ff', icon: faCircleExclamation   },
 };
 
-const KPI = [
-  { label: 'Handwashes Today', value: '284',   change: '+12%', up: true,  icon: faHandsWash,      color: '#10b981' },
-  { label: 'Soap Remaining',   value: '65%',   change: '-8%',  up: false, icon: faPumpSoap,       color: '#6366f1' },
-  { label: 'Water Used (L)',   value: '1,240', change: '+5%',  up: true,  icon: faDroplet,        color: '#0ea5e9' },
-  { label: 'Left Unwashed',    value: '38',    change: '-22%', up: false, icon: faPersonWalking,  color: '#ef4444' },
-];
-
-const SENSORS = [
-  { label: 'Water Level',  value: '75%',  pct: 75, icon: faDroplet,         color: '#0ea5e9' },
-  { label: 'Soap Level',   value: '65%',  pct: 65, icon: faPumpSoap,        color: '#6366f1' },
-  { label: 'Temperature',  value: '24°C', pct: 60, icon: faTemperatureHalf, color: '#f59e0b' },
-  { label: 'Handwash Count', value: '284', pct: 85, icon: faHandsWash,      color: '#10b981' },
-];
-
-const DEVICES = [
-  { id: 0, name: 'Soap Dispenser',     status: 'Online',  battery: 85,  icon: faPumpSoap,        color: '#6366f1' },
-  { id: 1, name: 'Water Valve',        status: 'Online',  battery: 92,  icon: faDroplet,         color: '#0ea5e9' },
-  { id: 2, name: 'Temperature Sensor', status: 'Offline', battery: 78,  icon: faTemperatureHalf, color: '#f59e0b' },
-  { id: 3, name: 'Handwash Counter',   status: 'Online',  battery: 90,  icon: faHandsWash,       color: '#10b981' },
-];
-
-const ALERTS = [
-  { title: 'Water Tank Empty',    device: 'Water Valve',        time: '11:00 AM', severity: 'High'   },
-  { title: 'Device Offline',      device: 'Temperature Sensor', time: '10:45 AM', severity: 'High'   },
-  { title: 'Low Soap Level',      device: 'Soap Dispenser',     time: '11:15 AM', severity: 'Medium' },
-  { title: 'Battery Low',         device: 'Handwash Counter',   time: '10:30 AM', severity: 'Low'    },
-];
+const KPI_ICONS    = { 'Handwashes Today': faHandsWash, 'Soap Remaining': faPumpSoap, 'Water Used (mL)': faDroplet, 'Left Unwashed': faPersonWalking };
+const SENSOR_ICONS = { 'Water Level': faDroplet, 'Soap Level': faPumpSoap, 'Temperature': faTemperatureHalf, 'Handwash Count': faHandsWash };
 
 const getGreeting = (date) => {
   const h = date.getHours();
-  if (h < 12) return { text: 'Good morning', icon: faSun, iconColor: '#f59e0b' };
+  if (h < 12) return { text: 'Good morning',   icon: faSun,      iconColor: '#f59e0b' };
   if (h < 17) return { text: 'Good afternoon', icon: faCloudSun, iconColor: '#f97316' };
-  if (h < 21) return { text: 'Good evening', icon: faCity, iconColor: '#6366f1' };
-  return { text: 'Good night', icon: faMoon, iconColor: '#8b5cf6' };
+  if (h < 21) return { text: 'Good evening',   icon: faCity,     iconColor: '#6366f1' };
+  return             { text: 'Good night',      icon: faMoon,     iconColor: '#8b5cf6' };
 };
 
-const formatDate = (date) =>
-  date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+const formatDate = (d) => d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+const formatTime = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-const formatTime = (date) =>
-  date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+const REFRESH_INTERVAL = 15000; // 15 seconds
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [now, setNow] = useState(new Date());
-  const [user, setUser] = useState(null);
-  const [summary, setSummary] = useState({ readable_date: '', station: '', status: '', active_alerts: 0 });
-  const [kpi, setKpi] = useState([]);
-  const [sensors, setSensors] = useState([]);
-  const [devices, setDevices] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [activity, setActivity] = useState({ hours: [], values: [] });
+  const [now, setNow]       = useState(new Date());
+  const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [summary,  setSummary]  = useState({ readable_date: '', station: '', status: '', active_alerts: 0 });
+  const [kpi,      setKpi]      = useState([]);
+  const [sensors,  setSensors]  = useState([]);
+  const [devices,  setDevices]  = useState([]);
+  const [alerts,   setAlerts]   = useState([]);
+  const [activity, setActivity] = useState({ hours: [], values: [] });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const stored = localStorage.getItem('user');
+    if (stored) setUser(JSON.parse(stored));
   }, []);
 
   useEffect(() => {
-    const tick = () => setNow(new Date());
-    const id = setInterval(tick, 60_000);
+    const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [summaryRes, kpiRes, sensorRes, deviceRes, alertRes, activityRes] = await Promise.all([
-          fetch(`${API_BASE}/api/dashboard/summary/`),
-          fetch(`${API_BASE}/api/dashboard/kpi/`),
-          fetch(`${API_BASE}/api/dashboard/sensors/`),
-          fetch(`${API_BASE}/api/dashboard/devices/`),
-          fetch(`${API_BASE}/api/dashboard/alerts/`),
-          fetch(`${API_BASE}/api/dashboard/activity/`),
-        ]);
+  const fetchData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const [summaryRes, kpiRes, sensorRes, deviceRes, alertRes, activityRes] = await Promise.all([
+        fetch(`${API_BASE}/api/dashboard/summary/`),
+        fetch(`${API_BASE}/api/dashboard/kpi/`),
+        fetch(`${API_BASE}/api/dashboard/sensors/`),
+        fetch(`${API_BASE}/api/dashboard/devices/`),
+        fetch(`${API_BASE}/api/dashboard/alerts/`),
+        fetch(`${API_BASE}/api/dashboard/activity/`),
+      ]);
 
-        if (summaryRes.ok) setSummary(await summaryRes.json());
-        if (kpiRes.ok) setKpi(await kpiRes.json());
-        if (sensorRes.ok) setSensors(await sensorRes.json());
-        if (deviceRes.ok) setDevices(await deviceRes.json());
-        if (alertRes.ok) setAlerts(await alertRes.json());
-        if (activityRes.ok) setActivity(await activityRes.json());
-      } catch (error) {
-        console.error('Dashboard fetch error', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      // Parse all successful responses in parallel
+      const [s, k, se, de, al, ac] = await Promise.all([
+        summaryRes.ok  ? summaryRes.json()  : null,
+        kpiRes.ok      ? kpiRes.json()      : null,
+        sensorRes.ok   ? sensorRes.json()   : null,
+        deviceRes.ok   ? deviceRes.json()   : null,
+        alertRes.ok    ? alertRes.json()    : null,
+        activityRes.ok ? activityRes.json() : null,
+      ]);
 
-    fetchData();
+      // Only update state when we have new data — previous data stays visible
+      if (s)  setSummary(s);
+      if (k)  setKpi(k);
+      if (se) setSensors(se);
+      if (de) setDevices(de);
+      if (al) setAlerts(al);
+      if (ac) setActivity(ac);
+
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Dashboard fetch error', err);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
+
+  // Initial fetch + auto-refresh every 15s
+  useEffect(() => {
+    fetchData();
+    const id = setInterval(fetchData, REFRESH_INTERVAL);
+    return () => clearInterval(id);
+  }, [fetchData]);
 
   const { text: greetText, icon: greetIcon, iconColor: greetColor } = getGreeting(now);
   const dateStr = summary.readable_date || formatDate(now);
   const timeStr = formatTime(now);
 
-  const displayKPI = kpi.length ? kpi : KPI;
-  const displaySensors = sensors.length ? sensors : SENSORS;
-  const displayDevices = devices.length ? devices : DEVICES;
-  const displayAlerts = alerts.length ? alerts : ALERTS;
+  const displayKPI     = kpi.map(k => ({ ...k, icon: KPI_ICONS[k.label]    ?? faServer }));
+  const displaySensors = sensors.map(s => ({ ...s, icon: SENSOR_ICONS[s.label] ?? faServer }));
+  const displayDevices = devices.map(d => ({ ...d, icon: ICON_MAP[d.icon]   ?? faServer }));
 
   const chartData = {
-    labels: activity.hours.length ? activity.hours : [],
+    labels: activity.hours,
     datasets: [{
-      data: activity.values.length ? activity.values : [],
+      data: activity.values,
       borderColor: '#6366f1',
       backgroundColor: 'rgba(99,102,241,0.1)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 0,
-      pointHoverRadius: 5,
-      borderWidth: 2.5,
+      fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5,
     }],
   };
 
@@ -153,11 +147,21 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <div className="db-page">Loading Dashboard...</div>;
+    return (
+      <div className="db-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text)' }}>
+        Loading Dashboard…
+      </div>
+    );
   }
 
   return (
     <div className="db-page">
+
+      {/* ── Subtle refresh indicator ── */}
+      <div className="db-live-bar">
+        <span className={`db-live-dot${isRefreshing ? ' db-live-active' : ''}`} />
+        {isRefreshing ? 'Fetching latest data…' : (lastUpdated ? `Updated ${formatTime(lastUpdated)}` : 'Loading…')}
+      </div>
 
       {/* ── Banner ── */}
       <div className="db-banner">
@@ -172,11 +176,11 @@ const Dashboard = () => {
         <div className="db-banner-pills">
           <span className="db-pill db-pill-green">
             <span className="db-pill-dot" />
-            System Operational
+            {summary.status || 'System Operational'}
           </span>
           <span className="db-pill db-pill-red">
             <FontAwesomeIcon icon={faBell} />
-            3 Active Alerts
+            {summary.active_alerts ?? 0} Active Alerts
           </span>
         </div>
       </div>
@@ -248,10 +252,6 @@ const Dashboard = () => {
           <div className="db-chart-wrap">
             <Line data={chartData} options={chartOpts} />
           </div>
-          <div className="db-chart-footer">
-            <span className="db-chart-peak">Peak: <strong>95 sessions</strong> at 11am</span>
-            <span className="db-chart-total">Total today: <strong>647</strong></span>
-          </div>
         </div>
 
         {/* Device status */}
@@ -262,7 +262,7 @@ const Dashboard = () => {
             </div>
             <div>
               <span className="db-card-title">Device Status</span>
-              <span className="db-card-sub">4 devices registered</span>
+              <span className="db-card-sub">{devices.length} devices registered</span>
             </div>
             <button className="db-card-link" onClick={() => navigate('/devices')}>
               View all <FontAwesomeIcon icon={faArrowRight} />
@@ -277,8 +277,8 @@ const Dashboard = () => {
                 <div className="db-device-info">
                   <span className="db-device-name">{dev.name}</span>
                   <span className="db-device-meta">
-                    <FontAwesomeIcon icon={faLocationDot} /> Main Entrance
-                    {dev.battery && <> · <FontAwesomeIcon icon={faBatteryThreeQuarters} /> {dev.battery}%</>}
+                    <FontAwesomeIcon icon={faLocationDot} /> {dev.location}
+                    {dev.battery != null && <> · <FontAwesomeIcon icon={faBatteryThreeQuarters} /> {dev.battery}%</>}
                   </span>
                 </div>
                 <span className={`db-device-badge ${dev.status === 'Online' ? 'db-badge-on' : 'db-badge-off'}`}>
@@ -298,15 +298,15 @@ const Dashboard = () => {
             </div>
             <div>
               <span className="db-card-title">Recent Alerts</span>
-              <span className="db-card-sub">Last 4 notifications</span>
+              <span className="db-card-sub">Last {alerts.length} notifications</span>
             </div>
             <button className="db-card-link" onClick={() => navigate('/alerts')}>
               View all <FontAwesomeIcon icon={faArrowRight} />
             </button>
           </div>
           <div className="db-alert-list">
-            {displayAlerts.map((a, i) => {
-              const s = SEV[a.severity];
+            {alerts.map((a, i) => {
+              const s = SEV[a.severity] ?? SEV.Low;
               return (
                 <div key={i} className="db-alert-row">
                   <div className="db-alert-icon" style={{ background: s.bg, color: s.color }}>

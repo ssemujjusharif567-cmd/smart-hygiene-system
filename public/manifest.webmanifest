@@ -1,0 +1,19 @@
+{
+  "name": "Smart Hygiene System",
+  "short_name": "SmartHygiene",
+  "description": "Smart dashboard for device monitoring and alerts.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon-rounded.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

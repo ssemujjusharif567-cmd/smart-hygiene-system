@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0f172a" />
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  <!-- safe zone is inner 80% = 102..410 -->
+  <rect x="102" y="102" width="308" height="308" rx="80" fill="url(#g)" />
+  <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle"
+    font-family="Inter, Arial, sans-serif" font-size="160" font-weight="800" fill="#ffffff">
+    SH
+  </text>
+</svg>

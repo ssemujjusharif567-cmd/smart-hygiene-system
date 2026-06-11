@@ -69,9 +69,22 @@ const Devices = () => {
   const navigate = useNavigate();
   const [devices,      setDevices]      = useState([]);
   const [loading,      setLoading]      = useState(true);
+  const [systemOnline, setSystemOnline] = useState(true);
+  const [isOnlineNet,  setIsOnlineNet]  = useState(navigator.onLine);
   const [search,       setSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isDarkTheme,  setIsDarkTheme]  = useState(document.body.classList.contains('theme-black'));
+
+  useEffect(() => {
+    const handleOnline  = () => setIsOnlineNet(true);
+    const handleOffline = () => setIsOnlineNet(false);
+    window.addEventListener('online',  handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -81,22 +94,60 @@ const Devices = () => {
     return () => observer.disconnect();
   }, []);
 
+  const fetchData = async () => {
+    try {
+      const [devicesRes, settingsRes] = await Promise.all([
+        fetch(`${API}/`),
+        fetch(`${API_BASE}/api/settings/`),
+      ]);
+
+      const deviceData = devicesRes.ok ? await devicesRes.json() : [];
+      const settings  = settingsRes.ok ? await settingsRes.json() : { system_online: true };
+
+      setSystemOnline(settings.system_online ?? true);
+      if (settings.system_online === false) {
+        setDevices(deviceData.map(d => ({ ...d, status: 'Offline' })));
+      } else {
+        setDevices(deviceData);
+      }
+    } catch {
+      setDevices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch(`${API}/`)
-      .then(r => r.json())
-      .then(data => setDevices(data))
-      .catch(() => setDevices([]))
-      .finally(() => setLoading(false));
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    const onSystemOnlineChange = (event) => {
+      const online = event.detail;
+      setSystemOnline(online);
+      if (!online) {
+        setDevices(prev => prev.map(d => ({ ...d, status: 'Offline' })));
+      } else {
+        fetchData();
+      }
+    };
+    window.addEventListener('systemOnlineChange', onSystemOnlineChange);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('systemOnlineChange', onSystemOnlineChange);
+    };
   }, []);
 
-  const filtered = devices.filter(d => {
+  const displayDevices = devices.map(d => ({
+    ...d,
+    effectiveStatus: (d.wifi === true && !isOnlineNet) ? 'Offline' : d.status,
+  }));
+  const online  = displayDevices.filter(d => d.effectiveStatus === 'Online').length;
+  const offline = displayDevices.filter(d => d.effectiveStatus === 'Offline').length;
+
+  const filtered = displayDevices.filter(d => {
     const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || d.status === statusFilter;
+    const matchStatus = statusFilter === 'All' || d.effectiveStatus === statusFilter;
     return matchSearch && matchStatus;
   });
-
-  const online  = devices.filter(d => d.status === 'Online').length;
-  const offline = devices.filter(d => d.status === 'Offline').length;
 
   return (
     <div className="dv-page">
@@ -151,6 +202,11 @@ const Devices = () => {
       {/* Grid */}
       {loading ? (
         <div className="dv-empty"><p style={{ color: '#94a3b8' }}>Loading devices…</p></div>
+      ) : !systemOnline ? (
+        <div className="dv-empty">
+          <FontAwesomeIcon icon={faServer} className="dv-empty-icon" />
+          <p>System is offline — all devices are offline.</p>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="dv-empty">
           <FontAwesomeIcon icon={faServer} className="dv-empty-icon" />
@@ -159,9 +215,9 @@ const Devices = () => {
       ) : (
         <div className="dv-grid">
           {filtered.map(device => {
-            const icon     = ICON_MAP[device.icon] ?? faServer;
-            const bat      = batteryMeta(device.battery);
-            const isOnline = device.status === 'Online';
+            const icon = ICON_MAP[device.icon] ?? faServer;
+            const bat  = batteryMeta(device.battery);
+            const isOnline = device.effectiveStatus === 'Online';
             return (
               <div key={device.id} className={`dv-card ${!isOnline ? 'dv-card-offline' : ''}`}
                 onClick={() => navigate(`/device/${device.id}`)}>
@@ -172,7 +228,7 @@ const Devices = () => {
                   </div>
                   <span className={`dv-status-pill ${isOnline ? 'dv-pill-on' : 'dv-pill-off'}`}>
                     <span className={`dv-pulse-dot ${isOnline ? 'pulse-on' : 'pulse-off'}`} />
-                    {device.status}
+                    {device.effectiveStatus}
                   </span>
                 </div>
 
@@ -189,18 +245,18 @@ const Devices = () => {
                     </span>
                   </div>
                   <div className="dv-card-sensor-row" style={{ color: isColorDark(device.color) ? '#e2e8f0' : undefined }}>
-                    {(device.icon === 'faDroplet' || device.icon === 'faWater') && (
+                    {device.latest_reading?.water_level != null && (
                       <div className="dv-sensor-item">
                         <div className="dv-sensor-container">
-                          <div className="dv-sensor-fill" style={{ height: `${device.latest_reading?.water_level || 0}%`, background: '#0ea5e9' }} />
+                          <div className="dv-sensor-fill" style={{ height: `${device.latest_reading.water_level}%`, background: '#0ea5e9' }} />
                         </div>
                         <span className="dv-sensor-label" style={{ marginTop: '4px' }}>Water Level</span>
                       </div>
                     )}
-                    {(device.icon === 'faPumpSoap') && (
+                    {device.latest_reading?.soap_level != null && (
                       <div className="dv-sensor-item">
                         <div className="dv-sensor-container">
-                          <div className="dv-sensor-fill" style={{ height: `${device.latest_reading?.soap_level || 0}%`, background: '#6366f1' }} />
+                          <div className="dv-sensor-fill" style={{ height: `${device.latest_reading.soap_level}%`, background: '#6366f1' }} />
                         </div>
                         <span className="dv-sensor-label" style={{ marginTop: '4px' }}>Soap Level</span>
                       </div>

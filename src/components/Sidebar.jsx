@@ -94,7 +94,7 @@ const Sidebar = ({ theme, setTheme, alertCount, user, onLogout }) => {
           </div>
           <div className="sidebar-user-info">
             <span className="sidebar-user-name">{user ? (user.full_name || user.username) : 'Guest'}</span>
-            <span className="sidebar-user-role">{user ? 'System Manager' : 'Browsing as guest'}</span>
+            <span className="sidebar-user-role">{user ? (user.is_superuser ? 'Superadmin' : user.is_staff ? 'Admin' : 'Viewer') : 'Browsing as guest'}</span>
           </div>
           {user
             ? <button className="sidebar-logout-btn" onClick={onLogout} title="Sign out"><FontAwesomeIcon icon={faRightFromBracket} /></button>
